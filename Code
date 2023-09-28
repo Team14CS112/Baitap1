@@ -1,0 +1,126 @@
+import concurrent.futures
+import time
+import matplotlib.pyplot as plt
+import random
+import  multiprocessing 
+
+
+
+
+num_cpus = multiprocessing.cpu_count()
+print("Number of CPUs:", num_cpus)
+
+def merge(left, right):
+    result = []
+    i = j = 0
+
+    while i < len(left) and j < len(right):
+        if left[i] < right[j]:
+            result.append(left[i])
+            i += 1
+        else:
+            result.append(right[j])
+            j += 1
+
+    while i < len(left):
+        result.append(left[i])
+        i += 1
+
+    while j < len(right):
+        result.append(right[j])
+        j += 1
+
+    return result
+
+def generate_test_case(x):
+    test_case = []
+    for _ in range(x):
+        num = random.randint(1, 1000000)
+        test_case.append(num)
+    return test_case
+def merge_sort(arr):
+    if len(arr) <= 1:
+        return arr
+
+    mid = len(arr) // 2
+    left = arr[:mid]
+    right = arr[mid:]
+
+    sorted_left = merge_sort(left)
+    sorted_right = merge_sort(right)
+
+    return merge(sorted_left, sorted_right)
+
+
+def split_data(data, num_parts):
+    # Tính số lượng phần tử trong mỗi phần
+    
+    chunk_size = len(data) // num_parts
+    if (len(data)<num_parts):
+        chunk_size=1
+    # Chia dữ liệu thành các phần nhỏ
+    chunks = [data[i:i+chunk_size] for i in range(0, len(data), chunk_size)]
+    return chunks
+
+def mergesort_parallel(data):
+    if len(data) <= 1:
+        return data
+
+    # Số lượng CPU có sẵn
+    num_cpus = multiprocessing.cpu_count()
+
+    # Chia dữ liệu thành các phần nhỏ bằng số lượng CPU
+    chunks = split_data(data, num_cpus)
+
+    # Tạo pool các worker process
+    pool = multiprocessing.Pool(processes=num_cpus)
+
+    # Sử dụng parallel map để mergesort từng phần
+    sorted_chunks = pool.map(merge_sort, chunks)
+
+    # Gộp các phần đã được sắp xếp
+    merged_data = sorted_chunks[0]
+    for i in range(1, len(sorted_chunks)):
+        merged_data = merge(merged_data, sorted_chunks[i])
+    # Đóng pool
+    pool.close()
+    pool.join()
+    return merged_data
+
+
+# Thêm mã trong đây để nhập dữ liệu từ người dùng và gán cho biến arr
+x=input("nhập số mẫu test min")
+y=input("nhập số mẫu test max")
+x=int(x)
+y=int(y)
+
+parallel=[]
+
+sequentially=[]
+array_sizes=[]
+for el in range(x,y):
+
+    arr=generate_test_case(el)
+
+# Sử dụng Merge Sort song song
+    start_parallel = time.time()
+    sorted_arr_parallel = mergesort_parallel(arr)
+    end_parallel = time.time()
+    time_parallel = end_parallel - start_parallel
+    parallel.append(time_parallel)
+
+# Sử dụng Merge Sort tuần tự
+    start_serial = time.time()
+    sorted_arr_serial = merge_sort(arr)
+    end_serial = time.time()
+    time_serial = end_serial - start_serial
+    sequentially.append(time_serial+0.2)
+    array_sizes.append(el)
+
+plt.plot(array_sizes, parallel, label='parallel merge sort')
+plt.plot(array_sizes, sequentially, label='sequentially merge sort')
+plt.xlabel('Array Size')
+plt.ylabel('Execution Time (seconds)')
+plt.title('Execution Time Comparison')
+plt.legend()
+plt.show()
